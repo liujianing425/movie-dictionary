@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Movie Search Demo</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#151823; --muted:#9aa4b2; --text:#e8ecf1; --accent:#6aa0ff; --chip:#232938; --ring:#2a3245;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:32px 18px 80px; font:16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+    color:var(--text); background:radial-gradient(1200px 600px at 30% -10%, #1a2030 0, #0f1115 55%) fixed;
+  }
+  .wrap{max-width:1100px; margin:0 auto}
+  header{display:flex; align-items:center; gap:14px; margin-bottom:18px}
+  header h1{font-size:22px; font-weight:700; margin:0}
+  .search{
+    position:sticky; top:0; z-index:5; margin:8px 0 24px; background:linear-gradient(180deg, rgba(15,17,21,.95), rgba(15,17,21,.65) 70%, transparent);
+    padding-top:6px; backdrop-filter: blur(6px);
+  }
+  .bar{
+    display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--ring); border-radius:12px; padding:12px 14px;
+    box-shadow:0 6px 18px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.02);
+  }
+  .bar input{
+    flex:1; background:transparent; border:0; outline:none; color:var(--text); font-size:16px;
+  }
+  .bar input::placeholder{color:#8b94a3}
+  .pill{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:var(--chip); color:var(--muted); font-size:12px}
+  .count{font-variant-numeric: tabular-nums}
+  .grid{
+    display:grid; grid-template-columns: repeat( auto-fill, minmax(240px,1fr) ); gap:16px;
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--ring); border-radius:14px; overflow:hidden;
+    display:flex; flex-direction:column; min-height:280px;
+    box-shadow:0 10px 28px rgba(0,0,0,.25);
+    transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .card:hover{transform: translateY(-2px); box-shadow:0 14px 36px rgba(0,0,0,.35)}
+  .poster{
+    aspect-ratio:16/9; background:#202737; display:flex; align-items:center; justify-content:center; font-size:48px; user-select:none;
+  }
+  .body{padding:12px 14px 14px; display:flex; flex-direction:column; gap:8px}
+  .title{font-weight:700; font-size:16px; line-height:1.3; margin:0}
+  .meta{display:flex; flex-wrap:wrap; gap:6px}
+  .chip{background:var(--chip); color:var(--muted); padding:2px 8px; border-radius:999px; font-size:12px}
+  .desc{color:#c7cfdb; font-size:13px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+  mark{background:transparent; color:inherit; padding:0 0 2px; border-bottom:2px solid var(--accent)}
+  .empty{
+    margin:40px auto; max-width:680px; text-align:center; color:var(--muted);
+    border:1px dashed var(--ring); border-radius:14px; padding:28px 18px; background:rgba(21,24,35,.35)
+  }
+  .footer{margin-top:28px; color:var(--muted); font-size:12px}
+  .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🎬 Movie Search</h1>
+      <span class="pill">Instant match</span>
+      <span class="pill">Search by title / genre / year / summary / cast</span>
+    </header>
+
+    <div class="search">
+      <label class="sr-only" for="q">Search movies</label>
+      <div class="bar">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79L20 21.49L21.49 20zM9.5 14C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5S14 7.01 14 9.5S11.99 14 9.5 14"></path></svg>
+        <input id="q" type="search" placeholder="Type letters or keywords: sci-fi / 1994 / Nolan / romance …" autofocus />
+        <span class="pill"><span class="count" id="count">0</span> movies</span>
+      </div>
+    </div>
+
+    <div id="results" class="grid" role="list"></div>
+    <div id="empty" class="empty" style="display:none">
+      No matching movies found. Try other keywords like genre (“sci-fi”), year (“2014”), or actor (“DiCaprio”).
+    </div>
+
+    <div class="footer">Tip: multiple keywords are supported, e.g. <code>sci-fi 2014</code>. URL query <code>?q=star</code> also works.</div>
+  </div>
+
+<script>
+/** ====== 1) Sample Data ====== */
+const MOVIES = [
+  {
+    title: "The Shawshank Redemption",
+    year: 1994,
+    genres: ["Drama","Crime"],
+    rating: 9.7,
+    cast: ["Tim Robbins","Morgan Freeman"],
+    summary: "A banker is wrongly imprisoned; he forms a deep friendship and pursues hope and freedom inside Shawshank Prison.",
+    posterEmoji: "🧱"
+  },
+  {
+    title: "Inception",
+    year: 2010,
+    genres: ["Sci-Fi","Action","Mystery"],
+    rating: 9.1,
+    cast: ["Leonardo DiCaprio","Joseph Gordon-Levitt","Elliot Page"],
+    summary: "A team that infiltrates dreams to plant ideas blurs the line between reality and illusion.",
+    posterEmoji: "🌀"
+  },
+  {
+    title: "Interstellar",
+    year: 2014,
+    genres: ["Sci-Fi","Adventure","Drama"],
+    rating: 9.3,
+    cast: ["Matthew McConaughey","Anne Hathaway","Jessica Chastain"],
+    summary: "As Earth faces extinction, astronauts travel through a wormhole to find humanity's new home.",
+    posterEmoji: "🌌"
+  },
+  {
+    title: "Parasite",
+    year: 2019,
+    genres: ["Drama","Thriller","Dark Comedy"],
+    rating: 8.7,
+    cast: ["Song Kang-ho","Choi Woo-shik","Park So-dam"],
+    summary: "Two families from opposite classes collide under one roof in a sharp social satire.",
+    posterEmoji: "🪳"
+  },
+  {
+    title: "Spirited Away",
+    year: 2001,
+    genres: ["Fantasy","Animation","Adventure"],
+    rating: 9.2,
+    cast: ["Rumi Hiiragi","Miyu Irino"],
+    summary: "A young girl enters a world of spirits and learns courage and growth while working in a bathhouse.",
+    posterEmoji: "🛁"
+  },
+  {
+    title: "The Dark Knight",
+    year: 2008,
+    genres: ["Action","Crime","Drama"],
+    rating: 9.2,
+    cast: ["Christian Bale","Heath Ledger"],
+    summary: "Batman faces the Joker, testing the limits of justice and order.",
+    posterEmoji: "🦇"
+  },
+  {
+    title: "La La Land",
+    year: 2016,
+    genres: ["Romance","Musical","Drama"],
+    rating: 8.3,
+    cast: ["Emma Stone","Ryan Gosling"],
+    summary: "A jazz musician and an actress fall in love while chasing their dreams in Los Angeles.",
+    posterEmoji: "🎹"
+  },
+  {
+    title: "Dune",
+    year: 2021,
+    genres: ["Sci-Fi","Adventure","Epic"],
+    rating: 8.2,
+    cast: ["Timothée Chalamet","Rebecca Ferguson","Zendaya"],
+    summary: "A noble family's son becomes the messiah of a desert planet rich in a coveted resource.",
+    posterEmoji: "🏜️"
+  },
+  {
+    title: "Everything Everywhere All at Once",
+    year: 2022,
+    genres: ["Sci-Fi","Fantasy","Comedy"],
+    rating: 8.0,
+    cast: ["Michelle Yeoh","Ke Huy Quan","Stephanie Hsu"],
+    summary: "A working mom is pulled into a multiverse adventure that blends chaos and heartfelt emotion.",
+    posterEmoji: "🧭"
+  },
+  {
+    title: "Incendies",
+    year: 2010,
+    genres: ["Drama","War","Mystery"],
+    rating: 8.4,
+    cast: ["Lubna Azabal","Mélissa Désormeaux-Poulin"],
+    summary: "Twins travel to the Middle East to uncover their mother's painful past and a family secret.",
+    posterEmoji: "🔥"
+  }
+];
+
+/** ====== 2) Helpers ====== */
+function debounce(fn, delay=160){
+  let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
+}
+function highlight(text, query){
+  if(!query) return escapeHtml(text);
+  const words = query.trim().split(/\s+/).filter(Boolean);
+  if(!words.length) return escapeHtml(text);
+  const pattern = words.map(w=> escapeRegExp(w)).join("|");
+  return escapeHtml(text).replace(new RegExp(`(${pattern})`, "gi"), '<mark>$1</mark>');
+}
+function escapeHtml(s){ return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function escapeRegExp(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+/** ====== 3) Search Logic ====== */
+function searchMovies(q){
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if(!words.length) return MOVIES.slice();
+  return MOVIES.filter(m=>{
+    const hay = [
+      m.title,
+      m.genres.join(" "),
+      String(m.year),
+      m.summary,
+      (m.cast||[]).join(" ")
+    ].join(" ").toLowerCase();
+    return words.every(w => hay.includes(w));
+  });
+}
+
+/** ====== 4) Rendering ====== */
+const $results = document.getElementById("results");
+const $empty = document.getElementById("empty");
+const $count = document.getElementById("count");
+const $q = document.getElementById("q");
+
+function render(list, q){
+  $results.innerHTML = "";
+  $count.textContent = list.length;
+  $empty.style.display = list.length ? "none" : "block";
+
+  const frag = document.createDocumentFragment();
+  list.forEach(m=>{
+    const card = document.createElement("article");
+    card.className = "card";
+    card.setAttribute("role","listitem");
+
+    const poster = document.createElement("div");
+    poster.className = "poster";
+    poster.textContent = m.posterEmoji || "🎞️";
+
+    const body = document.createElement("div"); body.className = "body";
+    const title = document.createElement("h3"); title.className = "title";
+    title.innerHTML = highlight(m.title, q);
+
+    const meta = document.createElement("div"); meta.className = "meta";
+    const y = document.createElement("span"); y.className = "chip"; y.textContent = m.year;
+    const r = document.createElement("span"); r.className = "chip"; r.textContent = `⭐ ${m.rating}`;
+    const g = document.createElement("span"); g.className = "chip"; g.innerHTML = highlight(m.genres.join(" / "), q);
+    meta.append(y,r,g);
+
+    const desc = document.createElement("p"); desc.className = "desc";
+    desc.innerHTML = highlight(m.summary, q);
+
+    const cast = document.createElement("div"); cast.className = "meta";
+    cast.innerHTML = `<span class="chip">Cast</span> <span class="chip">${highlight((m.cast||[]).join(", "), q)}</span>`;
+
+    body.append(title, meta, desc, cast);
+    card.append(poster, body);
+    frag.append(card);
+  });
+  $results.append(frag);
+}
+
+/** ====== 5) URL Handling ====== */
+function getParamQ(){
+  const u = new URL(location.href);
+  return u.searchParams.get("q") || "";
+}
+function setParamQ(v){
+  const u = new URL(location.href);
+  if(v) u.searchParams.set("q", v);
+  else u.searchParams.delete("q");
+  history.replaceState(null, "", u.toString());
+}
+
+const handleInput = debounce(e=>{
+  const v = e.target.value;
+  setParamQ(v);
+  render(searchMovies(v), v);
+});
+
+$q.addEventListener("input", handleInput);
+
+window.addEventListener("DOMContentLoaded", ()=>{
+  const initQ = getParamQ();
+  if(initQ) $q.value = initQ;
+  render(searchMovies($q.value||""), $q.value||"");
+});
+</script>
+</body>
+</html>
