@@ -1,280 +1,398 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Movie Search Demo</title>
+<title>电影台词检索 · Demo</title>
 <style>
-  :root{
-    --bg:#0f1115; --panel:#151823; --muted:#9aa4b2; --text:#e8ecf1; --accent:#6aa0ff; --chip:#232938; --ring:#2a3245;
-  }
+  :root{ --bg:#0f1115; --panel:#161a24; --ring:#2a3245; --muted:#9aa4b2; --text:#e8ecf1; --accent:#6aa0ff; --chip:#23293a; }
   *{box-sizing:border-box}
-  body{
-    margin:0; padding:32px 18px 80px; font:16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
-    color:var(--text); background:radial-gradient(1200px 600px at 30% -10%, #1a2030 0, #0f1115 55%) fixed;
-  }
-  .wrap{max-width:1100px; margin:0 auto}
-  header{display:flex; align-items:center; gap:14px; margin-bottom:18px}
-  header h1{font-size:22px; font-weight:700; margin:0}
-  .search{
-    position:sticky; top:0; z-index:5; margin:8px 0 24px; background:linear-gradient(180deg, rgba(15,17,21,.95), rgba(15,17,21,.65) 70%, transparent);
-    padding-top:6px; backdrop-filter: blur(6px);
-  }
-  .bar{
-    display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--ring); border-radius:12px; padding:12px 14px;
-    box-shadow:0 6px 18px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.02);
-  }
-  .bar input{
-    flex:1; background:transparent; border:0; outline:none; color:var(--text); font-size:16px;
-  }
-  .bar input::placeholder{color:#8b94a3}
-  .pill{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:var(--chip); color:var(--muted); font-size:12px}
+  body{margin:0; background:radial-gradient(1000px 500px at 25% -5%, #1a2132 0,#0f1115 60%) fixed; color:var(--text);
+       font:15.5px/1.6 system-ui,-apple-system,Segoe UI,Roboto,"PingFang SC","Helvetica Neue",Arial }
+  .wrap{max-width:1200px; margin:0 auto; padding:22px 16px 48px;}
+  header{display:flex; align-items:center; gap:10px; margin-bottom:10px}
+  header h1{font-size:22px; margin:0 6px 0 0}
+  .pill{background:var(--chip); color:var(--muted); padding:6px 10px; border-radius:999px; font-size:12px}
+  .bar{position:sticky; top:0; z-index:5; margin:10px 0 18px; background:linear-gradient(180deg, rgba(15,17,21,.95), rgba(15,17,21,.65) 70%, transparent);
+       backdrop-filter: blur(6px); padding-top:6px;}
+  .bar .inner{display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--ring); border-radius:12px; padding:12px 14px;
+              box-shadow:0 6px 18px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.02);}
+  input[type="search"]{flex:1; background:transparent; border:0; outline:none; font-size:16px; color:var(--text)}
+  input::placeholder{color:#8b94a3}
   .count{font-variant-numeric: tabular-nums}
-  .grid{
-    display:grid; grid-template-columns: repeat( auto-fill, minmax(240px,1fr) ); gap:16px;
-  }
-  .card{
-    background:var(--panel); border:1px solid var(--ring); border-radius:14px; overflow:hidden;
-    display:flex; flex-direction:column; min-height:280px;
-    box-shadow:0 10px 28px rgba(0,0,0,.25);
-    transition:transform .18s ease, box-shadow .18s ease;
-  }
-  .card:hover{transform: translateY(-2px); box-shadow:0 14px 36px rgba(0,0,0,.35)}
-  .poster{
-    aspect-ratio:16/9; background:#202737; display:flex; align-items:center; justify-content:center; font-size:48px; user-select:none;
-  }
-  .body{padding:12px 14px 14px; display:flex; flex-direction:column; gap:8px}
-  .title{font-weight:700; font-size:16px; line-height:1.3; margin:0}
-  .meta{display:flex; flex-wrap:wrap; gap:6px}
+  main{display:grid; grid-template-columns: minmax(320px, 520px) 1fr; gap:16px}
+  .panel{background:var(--panel); border:1px solid var(--ring); border-radius:14px; padding:12px; min-height:280px;
+         box-shadow:0 10px 26px rgba(0,0,0,.25)}
+  .results{display:flex; flex-direction:column; gap:8px; max-height:70vh; overflow:auto}
+  .item{display:block; padding:10px 12px; border:1px solid transparent; border-radius:10px; text-decoration:none; color:inherit}
+  .item:hover{background:#1b2130; border-color:#2b364b}
+  .item h3{margin:0 0 4px; font-size:15px}
+  .meta{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:4px}
   .chip{background:var(--chip); color:var(--muted); padding:2px 8px; border-radius:999px; font-size:12px}
-  .desc{color:#c7cfdb; font-size:13px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+  .snippet{color:#c8d0dc; font-size:13px}
   mark{background:transparent; color:inherit; padding:0 0 2px; border-bottom:2px solid var(--accent)}
-  .empty{
-    margin:40px auto; max-width:680px; text-align:center; color:var(--muted);
-    border:1px dashed var(--ring); border-radius:14px; padding:28px 18px; background:rgba(21,24,35,.35)
-  }
-  .footer{margin-top:28px; color:var(--muted); font-size:12px}
-  .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
+  .scene-head{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px}
+  .scene-title{font-weight:700; margin:0; font-size:16px}
+  .nav-btns{display:flex; gap:8px}
+  button{background:#20273a; color:#e8ecf1; border:1px solid #2a3245; border-radius:8px; padding:6px 10px; cursor:pointer}
+  button:disabled{opacity:.5; cursor:not-allowed}
+  .lines{display:flex; flex-direction:column; gap:6px; max-height:62vh; overflow:auto; padding-right:4px}
+  .line{padding:8px 10px; border:1px solid #2a3245; border-radius:10px}
+  .who{font-weight:700}
+  .ts{color:#9fb0c9; font-variant-numeric: tabular-nums; margin-left:6px}
+  .empty{padding:18px; border:1px dashed var(--ring); border-radius:12px; color:#9aa4b2; text-align:center}
+  .footer{margin-top:10px; color:#9aa4b2; font-size:12px}
+  .row{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .file{display:inline-block}
+  .tips{color:#9aa4b2; font-size:12px}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>🎬 Movie Search</h1>
-      <span class="pill">Instant match</span>
-      <span class="pill">Search by title / genre / year / summary / cast</span>
-    </header>
+<div class="wrap">
+  <header>
+    <h1>🎞️ 电影台词检索</h1>
+    <span class="pill">全库搜索台词（英文名句）</span>
+    <span class="pill">URL 直达</span>
+    <span class="pill">可导入 JSON</span>
+  </header>
 
-    <div class="search">
-      <label class="sr-only" for="q">Search movies</label>
-      <div class="bar">
-        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79L20 21.49L21.49 20zM9.5 14C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5S14 7.01 14 9.5S11.99 14 9.5 14"></path></svg>
-        <input id="q" type="search" placeholder="Type letters or keywords: sci-fi / 1994 / Nolan / romance …" autofocus />
-        <span class="pill"><span class="count" id="count">0</span> movies</span>
-      </div>
+  <div class="bar">
+    <div class="inner">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79L20 21.49L21.49 20zM9.5 14C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5S14 7.01 14 9.5S11.99 14 9.5 14"></path></svg>
+      <input id="q" type="search" placeholder="输入关键词：box of chocolates / hope / king of the world …">
+      <span class="pill"><span id="cnt" class="count">0</span> 条命中</span>
+      <label class="file pill" style="cursor:pointer">
+        <input id="file" type="file" accept="application/json" hidden>
+        导入JSON
+      </label>
     </div>
-
-    <div id="results" class="grid" role="list"></div>
-    <div id="empty" class="empty" style="display:none">
-      No matching movies found. Try other keywords like genre (“sci-fi”), year (“2014”), or actor (“DiCaprio”).
+    <div class="row tips" style="margin:6px 4px 0 4px">
+      支持多关键词 <code>AND</code>（空格分隔）；字段：台词文本、角色、场景名、电影名、时间戳（如 <code>01:23:45</code>）。
     </div>
-
-    <div class="footer">Tip: multiple keywords are supported, e.g. <code>sci-fi 2014</code>. URL query <code>?q=star</code> also works.</div>
   </div>
 
+  <main>
+    <!-- 左侧：检索结果 -->
+    <section class="panel">
+      <div id="results" class="results" role="list"></div>
+      <div id="nores" class="empty" style="display:none">没有找到匹配结果。</div>
+      <div class="footer">小贴士：可通过 URL 参数共享状态，如 <code>?q=hope&movie=shawshank&scene=library</code></div>
+    </section>
+
+    <!-- 右侧：场景查看 -->
+    <section class="panel">
+      <div class="scene-head">
+        <h2 id="sceneTitle" class="scene-title">选择左侧结果来查看具体场景</h2>
+        <div class="nav-btns">
+          <button id="prevBtn" disabled>上一幕</button>
+          <button id="nextBtn" disabled>下一幕</button>
+        </div>
+      </div>
+      <div id="crumbs" class="meta" style="margin-bottom:8px"></div>
+      <div id="lines" class="lines"></div>
+    </section>
+  </main>
+</div>
+
 <script>
-/** ====== 1) Sample Data ====== */
-const MOVIES = [
-  {
-    title: "The Shawshank Redemption",
-    year: 1994,
-    genres: ["Drama","Crime"],
-    rating: 9.7,
-    cast: ["Tim Robbins","Morgan Freeman"],
-    summary: "A banker is wrongly imprisoned; he forms a deep friendship and pursues hope and freedom inside Shawshank Prison.",
-    posterEmoji: "🧱"
-  },
-  {
-    title: "Inception",
-    year: 2010,
-    genres: ["Sci-Fi","Action","Mystery"],
-    rating: 9.1,
-    cast: ["Leonardo DiCaprio","Joseph Gordon-Levitt","Elliot Page"],
-    summary: "A team that infiltrates dreams to plant ideas blurs the line between reality and illusion.",
-    posterEmoji: "🌀"
-  },
-  {
-    title: "Interstellar",
-    year: 2014,
-    genres: ["Sci-Fi","Adventure","Drama"],
-    rating: 9.3,
-    cast: ["Matthew McConaughey","Anne Hathaway","Jessica Chastain"],
-    summary: "As Earth faces extinction, astronauts travel through a wormhole to find humanity's new home.",
-    posterEmoji: "🌌"
-  },
-  {
-    title: "Parasite",
-    year: 2019,
-    genres: ["Drama","Thriller","Dark Comedy"],
-    rating: 8.7,
-    cast: ["Song Kang-ho","Choi Woo-shik","Park So-dam"],
-    summary: "Two families from opposite classes collide under one roof in a sharp social satire.",
-    posterEmoji: "🪳"
-  },
-  {
-    title: "Spirited Away",
-    year: 2001,
-    genres: ["Fantasy","Animation","Adventure"],
-    rating: 9.2,
-    cast: ["Rumi Hiiragi","Miyu Irino"],
-    summary: "A young girl enters a world of spirits and learns courage and growth while working in a bathhouse.",
-    posterEmoji: "🛁"
-  },
-  {
-    title: "The Dark Knight",
-    year: 2008,
-    genres: ["Action","Crime","Drama"],
-    rating: 9.2,
-    cast: ["Christian Bale","Heath Ledger"],
-    summary: "Batman faces the Joker, testing the limits of justice and order.",
-    posterEmoji: "🦇"
-  },
-  {
-    title: "La La Land",
-    year: 2016,
-    genres: ["Romance","Musical","Drama"],
-    rating: 8.3,
-    cast: ["Emma Stone","Ryan Gosling"],
-    summary: "A jazz musician and an actress fall in love while chasing their dreams in Los Angeles.",
-    posterEmoji: "🎹"
-  },
-  {
-    title: "Dune",
-    year: 2021,
-    genres: ["Sci-Fi","Adventure","Epic"],
-    rating: 8.2,
-    cast: ["Timothée Chalamet","Rebecca Ferguson","Zendaya"],
-    summary: "A noble family's son becomes the messiah of a desert planet rich in a coveted resource.",
-    posterEmoji: "🏜️"
-  },
-  {
-    title: "Everything Everywhere All at Once",
-    year: 2022,
-    genres: ["Sci-Fi","Fantasy","Comedy"],
-    rating: 8.0,
-    cast: ["Michelle Yeoh","Ke Huy Quan","Stephanie Hsu"],
-    summary: "A working mom is pulled into a multiverse adventure that blends chaos and heartfelt emotion.",
-    posterEmoji: "🧭"
-  },
-  {
-    title: "Incendies",
-    year: 2010,
-    genres: ["Drama","War","Mystery"],
-    rating: 8.4,
-    cast: ["Lubna Azabal","Mélissa Désormeaux-Poulin"],
-    summary: "Twins travel to the Middle East to uncover their mother's painful past and a family secret.",
-    posterEmoji: "🔥"
-  }
-];
+/* ===================== 1) 你的内置英文台词库（经典短句，非全文） ===================== */
+let DB = {
+  movies: [
+    {
+      id: "forrest_gump",
+      title: "Forrest Gump",
+      year: 1994,
+      scenes: [
+        {
+          id: "bench",
+          title: "Bus Stop Bench",
+          start: "",
+          end: "",
+          lines: [
+            { t: "", who: "Forrest", text: "Life is like a box of chocolates." },
+            { t: "", who: "Forrest", text: "You never know what you're gonna get." }
+          ]
+        },
+        {
+          id: "run",
+          title: "Run, Forrest, Run",
+          start: "",
+          end: "",
+          lines: [
+            { t: "", who: "Jenny", text: "Run, Forrest, run!" },
+            { t: "", who: "Forrest", text: "I just kept on running." }
+          ]
+        },
+        {
+          id: "love",
+          title: "About Love",
+          start: "",
+          end: "",
+          lines: [
+            { t: "", who: "Forrest", text: "I'm not a smart man, but I know what love is." }
+          ]
+        }
+      ]
+    },
+    {
+      id: "truman_show",
+      title: "The Truman Show",
+      year: 1998,
+      scenes: [
+        {
+          id: "greeting",
+          title: "Morning Greeting",
+          start: "",
+          end: "",
+          lines: [
+            { t: "", who: "Truman", text: "Good morning!" },
+            { t: "", who: "Truman", text: "And in case I don't see ya, good afternoon, good evening, and good night!" }
+          ]
+        },
+        {
+          id: "reality",
+          title: "On Reality",
+          start: "",
+          end: "",
+          lines: [
+            { t: "", who: "Christof", text: "We accept the reality of the world with which we're presented." }
+          ]
+        },
+        {
+          id: "spontaneous",
+          title: "Spontaneous",
+          start: "",
+          end: "",
+          lines: [
+            { t: "", who: "Truman", text: "Somebody help me! I'm being spontaneous!" }
+          ]
+        }
+      ]
+    },
+    {
+      id: "shawshank",
+      title: "The Shawshank Redemption",
+      year: 1994,
+      scenes: [
+        {
+          id: "library",
+          title: "Library and Hope",
+          start: "",
+          end: "",
+          lines: [
+            { t: "", who: "Andy", text: "Hope is a good thing, maybe the best of things." },
+            { t: "", who: "Red",  text: "Get busy living, or get busy dying." }
+          ]
+        },
+        {
+          id: "choice",
+          title: "Simple Choice",
+          start: "",
+          end: "",
+          lines: [
+            { t: "", who: "Red", text: "I guess it comes down to a simple choice, really." }
+          ]
+        }
+      ]
+    },
+    {
+      id: "titanic",
+      title: "Titanic",
+      year: 1997,
+      scenes: [
+        {
+          id: "prow",
+          title: "King of the World",
+          start: "",
+          end: "",
+          lines: [
+            { t: "", who: "Jack", text: "I'm the king of the world!" }
+          ]
+        },
+        {
+          id: "drawing",
+          title: "French Girls",
+          start: "",
+          end: "",
+          lines: [
+            { t: "", who: "Rose", text: "Draw me like one of your French girls." }
+          ]
+        },
+        {
+          id: "promise",
+          title: "You Jump, I Jump",
+          start: "",
+          end: "",
+          lines: [
+            { t: "", who: "Jack", text: "You jump, I jump." },
+            { t: "", who: "Rose", text: "I'll never let go." }
+          ]
+        }
+      ]
+    }
+  ]
+};
 
-/** ====== 2) Helpers ====== */
-function debounce(fn, delay=160){
-  let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
+/* ===================== 2) 工具函数（转义/高亮/防抖/URL） ===================== */
+const esc = s => (s??"").toString().replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+const rex = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+function highlight(text, q){
+  if(!q) return esc(text);
+  const words = q.trim().split(/\s+/).filter(Boolean).map(rex);
+  if(!words.length) return esc(text);
+  return esc(text).replace(new RegExp('('+words.join('|')+')','gi'),'<mark>$1</mark>');
 }
-function highlight(text, query){
-  if(!query) return escapeHtml(text);
-  const words = query.trim().split(/\s+/).filter(Boolean);
-  if(!words.length) return escapeHtml(text);
-  const pattern = words.map(w=> escapeRegExp(w)).join("|");
-  return escapeHtml(text).replace(new RegExp(`(${pattern})`, "gi"), '<mark>$1</mark>');
-}
-function escapeHtml(s){ return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-function escapeRegExp(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-
-/** ====== 3) Search Logic ====== */
-function searchMovies(q){
-  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  if(!words.length) return MOVIES.slice();
-  return MOVIES.filter(m=>{
-    const hay = [
-      m.title,
-      m.genres.join(" "),
-      String(m.year),
-      m.summary,
-      (m.cast||[]).join(" ")
-    ].join(" ").toLowerCase();
-    return words.every(w => hay.includes(w));
+function debounce(fn, d=160){ let t; return (...a)=>{clearTimeout(t); t=setTimeout(()=>fn(...a),d)} }
+function getParam(k){ const u=new URL(location.href); return u.searchParams.get(k) }
+function setParams(obj){
+  const u = new URL(location.href);
+  Object.entries(obj).forEach(([k,v])=>{
+    if(v==null || v==="") u.searchParams.delete(k);
+    else u.searchParams.set(k, v);
   });
+  history.replaceState(null,"",u.toString());
 }
 
-/** ====== 4) Rendering ====== */
-const $results = document.getElementById("results");
-const $empty = document.getElementById("empty");
-const $count = document.getElementById("count");
-const $q = document.getElementById("q");
+/* ===================== 3) 搜索 ===================== */
+function searchLines(rawQ){
+  const q = (rawQ||"").trim().toLowerCase();
+  const words = q.split(/\s+/).filter(Boolean);
+  const all = [];
+  for(const mv of DB.movies){
+    for(const sc of (mv.scenes||[])){
+      for(let i=0;i<(sc.lines||[]).length;i++){
+        const ln = sc.lines[i];
+        const hay = [ ln.text, ln.who, ln.t, sc.title, mv.title ].join(" ").toLowerCase();
+        const ok = words.length ? words.every(w=>hay.includes(w)) : true;
+        if(ok){
+          const score = words.reduce((s,w)=> s + (hay.includes(w)?1:0), 0);
+          all.push({ movieId: mv.id, movieTitle: mv.title, sceneId: sc.id, sceneTitle: sc.title, pos: i, line: ln, score });
+        }
+      }
+    }
+  }
+  all.sort((a,b)=> b.score - a.score || a.movieTitle.localeCompare(b.movieTitle) || a.sceneTitle.localeCompare(b.sceneTitle) || (a.line.t||"").localeCompare(b.line.t||""));
+  return all;
+}
 
-function render(list, q){
+/* ===================== 4) 渲染 ===================== */
+const $q = document.getElementById('q');
+const $cnt = document.getElementById('cnt');
+const $results = document.getElementById('results');
+const $nores = document.getElementById('nores');
+const $lines = document.getElementById('lines');
+const $sceneTitle = document.getElementById('sceneTitle');
+const $crumbs = document.getElementById('crumbs');
+const $prev = document.getElementById('prevBtn');
+const $next = document.getElementById('nextBtn');
+
+function renderResults(list, q){
   $results.innerHTML = "";
-  $count.textContent = list.length;
-  $empty.style.display = list.length ? "none" : "block";
+  $cnt.textContent = list.length;
+  $nores.style.display = list.length ? "none":"block";
 
   const frag = document.createDocumentFragment();
-  list.forEach(m=>{
-    const card = document.createElement("article");
-    card.className = "card";
-    card.setAttribute("role","listitem");
+  for(const r of list){
+    const a = document.createElement('a');
+    a.href = "#";
+    a.className = "item";
+    a.setAttribute("role","listitem");
+    a.dataset.movie = r.movieId;
+    a.dataset.scene = r.sceneId;
+    a.dataset.pos = r.pos;
 
-    const poster = document.createElement("div");
-    poster.className = "poster";
-    poster.textContent = m.posterEmoji || "🎞️";
+    const h3 = document.createElement('h3');
+    h3.innerHTML = `${highlight(r.movieTitle, q)} — ${highlight(r.sceneTitle, q)}`;
 
-    const body = document.createElement("div"); body.className = "body";
-    const title = document.createElement("h3"); title.className = "title";
-    title.innerHTML = highlight(m.title, q);
+    const meta = document.createElement('div'); meta.className = "meta";
+    const c1 = document.createElement('span'); c1.className = "chip"; c1.textContent = r.line.who || "Unknown";
+    const c2 = document.createElement('span'); c2.className = "chip"; c2.textContent = r.line.t || "--:--:--";
+    meta.append(c1,c2);
 
-    const meta = document.createElement("div"); meta.className = "meta";
-    const y = document.createElement("span"); y.className = "chip"; y.textContent = m.year;
-    const r = document.createElement("span"); r.className = "chip"; r.textContent = `⭐ ${m.rating}`;
-    const g = document.createElement("span"); g.className = "chip"; g.innerHTML = highlight(m.genres.join(" / "), q);
-    meta.append(y,r,g);
+    const p = document.createElement('div'); p.className = "snippet";
+    p.innerHTML = highlight(r.line.text, q);
 
-    const desc = document.createElement("p"); desc.className = "desc";
-    desc.innerHTML = highlight(m.summary, q);
+    a.append(h3, meta, p);
+    a.addEventListener('click', (e)=>{
+      e.preventDefault();
+      openScene(r.movieId, r.sceneId, q);
+      setParams({ q: $q.value, movie: r.movieId, scene: r.sceneId });
+    });
 
-    const cast = document.createElement("div"); cast.className = "meta";
-    cast.innerHTML = `<span class="chip">Cast</span> <span class="chip">${highlight((m.cast||[]).join(", "), q)}</span>`;
-
-    body.append(title, meta, desc, cast);
-    card.append(poster, body);
-    frag.append(card);
-  });
+    frag.append(a);
+  }
   $results.append(frag);
 }
 
-/** ====== 5) URL Handling ====== */
-function getParamQ(){
-  const u = new URL(location.href);
-  return u.searchParams.get("q") || "";
-}
-function setParamQ(v){
-  const u = new URL(location.href);
-  if(v) u.searchParams.set("q", v);
-  else u.searchParams.delete("q");
-  history.replaceState(null, "", u.toString());
+function openScene(movieId, sceneId, q){
+  const mv = DB.movies.find(m=>m.id===movieId);
+  if(!mv){ return }
+  const idx = mv.scenes.findIndex(s=>s.id===sceneId);
+  if(idx<0){ return }
+  const sc = mv.scenes[idx];
+
+  $sceneTitle.textContent = `${mv.title} · ${sc.title}`;
+  $crumbs.innerHTML = `
+    <span class="chip">Movie</span><span class="chip">${esc(mv.title)}</span>
+    <span class="chip">Scene</span><span class="chip">${esc(sc.title)}</span>
+    ${sc.start? `<span class="chip">${esc(sc.start)} — ${esc(sc.end||"")}</span>`:""}
+  `;
+
+  $prev.disabled = idx<=0;
+  $next.disabled = idx>=mv.scenes.length-1;
+  $prev.onclick = ()=>{ openScene(movieId, mv.scenes[idx-1].id, q); setParams({ q: $q.value, movie: movieId, scene: mv.scenes[idx-1].id }); }
+  $next.onclick = ()=>{ openScene(movieId, mv.scenes[idx+1].id, q); setParams({ q: $q.value, movie: movieId, scene: mv.scenes[idx+1].id }); }
+
+  $lines.innerHTML = "";
+  const frag = document.createDocumentFragment();
+  (sc.lines||[]).forEach(ln=>{
+    const div = document.createElement('div'); div.className = "line";
+    const head = document.createElement('div');
+    head.innerHTML = `<span class="who">${esc(ln.who||"Unknown")}</span><span class="ts">${esc(ln.t||"--:--:--")}</span>`;
+    const txt = document.createElement('div');
+    txt.innerHTML = highlight(ln.text||"", q);
+    div.append(head, txt);
+    frag.append(div);
+  });
+  $lines.append(frag);
 }
 
-const handleInput = debounce(e=>{
-  const v = e.target.value;
-  setParamQ(v);
-  render(searchMovies(v), v);
+/* ===================== 5) 事件与初始加载 ===================== */
+const handleInput = debounce(()=>{
+  const q = $q.value;
+  const list = searchLines(q);
+  renderResults(list, q);
+  setParams({ q, movie:getParam('movie'), scene:getParam('scene') });
+}, 120);
+
+$q.addEventListener('input', handleInput);
+
+document.getElementById('file').addEventListener('change', async (e)=>{
+  const f = e.target.files?.[0];
+  if(!f) return;
+  try{
+    const text = await f.text();
+    const json = JSON.parse(text);
+    if(!json.movies || !Array.isArray(json.movies)) throw new Error("Invalid JSON: missing movies[]");
+    DB = json;
+    handleInput();
+    const m = getParam('movie'); const s = getParam('scene');
+    if(m && s) openScene(m, s, $q.value);
+    alert("数据已导入成功 ✅");
+  }catch(err){
+    console.error(err);
+    alert("导入失败：请确认 JSON 结构正确。");
+  }finally{
+    e.target.value = "";
+  }
 });
 
-$q.addEventListener("input", handleInput);
-
-window.addEventListener("DOMContentLoaded", ()=>{
-  const initQ = getParamQ();
-  if(initQ) $q.value = initQ;
-  render(searchMovies($q.value||""), $q.value||"");
+window.addEventListener('DOMContentLoaded', ()=>{
+  const q = getParam('q') || "";
+  $q.value = q;
+  renderResults(searchLines(q), q);
+  const m = getParam('movie'), s = getParam('scene');
+  if(m && s) openScene(m, s, q);
 });
 </script>
 </body>
